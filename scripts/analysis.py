@@ -67,3 +67,46 @@ def categorical_cols_univariate_analysis(data):
 
     plt.tight_layout()
     plt.show()
+
+
+def remove_outliers(df):
+    for col in df.select_dtypes(include=['float64', 'int64']).columns:
+        Q1 = df[col].quantile(0.25)
+        Q3 = df[col].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 3 * IQR
+        upper_bound = Q3 + 3 * IQR
+        df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
+    
+    for col in df.select_dtypes(include=['object', 'category']).columns:
+        frequency = df[col].value_counts()
+        threshold = 1
+        mask = df[col].isin(frequency[frequency > threshold].index)
+        df = df[mask]
+        
+    return df
+
+def plot_trends_by_geography(data, geography_col, trend_cols):
+    geography_group = data.groupby(geography_col)
+
+    for col in trend_cols:
+        plt.figure(figsize=(10, 6))
+        
+        if data[col].dtype == 'float64' or data[col].dtype == 'int64':
+            #numeric: calculate the mean
+            col_mean = geography_group[col].mean()
+            col_mean.plot(kind='bar', color='skyblue')
+            plt.title(f'Mean {col} by {geography_col}',figsize=(20, 12))
+            plt.ylabel(f'Mean {col}')
+        
+        else:
+            #categorical: calculate the distribution
+            col_distribution = geography_group[col].value_counts(normalize=True).unstack()
+            col_distribution.plot(kind='bar', stacked=True, figsize=(20, 12), colormap='Set3')
+            plt.title(f'{col} Distribution by {geography_col}')
+            plt.ylabel(f'Proportion of {col}')
+        
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.subplots_adjust(right=0.75)
+        plt.show()
